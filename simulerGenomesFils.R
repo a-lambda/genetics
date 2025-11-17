@@ -104,10 +104,10 @@ percentage_of_alleles_parent <- function(genome_child, genome_parent, male = TRU
 
 simulation <- function(count, size) {
 
+    list_genomes <- vector()
     for (i in 1:count) {
         
         prop.oncle <- numeric(size)
-
         for (j in 1:size) {
 
 # je vais simuler la naissance de 2 fils issus des deux grands-parents gp1 et gm1
@@ -139,14 +139,15 @@ simulation <- function(count, size) {
             # prop.pere[j] <- percentage_of_alleles_parent(genome_p1_1_m2, genome_p1_1)
             prop.oncle[j] <- percentage_of_alleles_parent(genome_p1_1_m2, genome_p1_2)
             if (prop.oncle[j] == 0.5) {
-                list_genomes <- list(genome_p1_1, genome_p1_2, genome_m2, genome_p1_1_m2)
-                saveRDS(list_genomes, file = "list_genomes.RDS")
+                list_genomes <- rbind(list_genomes, list(genome_p1_1, genome_p1_2, genome_m2, genome_p1_1_m2))
             }
             # prop.mere[j] <- percentage_of_alleles_parent(genome_p1_1_m2, genome_m2, male = FALSE)
 
         }
         saveRDS(prop.oncle, file = paste0("data/df", i, ".RDS"))
     }
+    saveRDS(list_genomes, file = paste0("liste_genomes.RDS"))
+
 }
 
 simulation(count = 1000, size = 100000)
@@ -162,9 +163,9 @@ for (i in 2:count) {
 
 }
 
-#hist(df$prop.oncle, breaks = 12)
+hist(df$prop.oncle, breaks = 12)
 summary(df$prop.oncle)
 #library(ggplot2)
-#df |> 
+#df |>
 #  ggplot( aes(x=prop.oncle)) +
     #  geom_density(fill="#69b3a2", color="#e9ecef", alpha=0.8)
