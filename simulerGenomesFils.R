@@ -10,36 +10,81 @@ CHR_COUNT <- 22
 POOL_ALLELES <- 1:1e9
 
 choose_autosomes_alleles <- function(pool_alleles = POOL_ALLELES, chr_count = CHR_COUNT) {
-    return(list(
-        sample(pool_alleles, size = chr_count, replace = FALSE),
-        sample(pool_alleles, size = chr_count, replace = FALSE)
-       )
-    )
+    
+    autosomes_alleles <- pool_alleles |> 
+        sample(size = chr_count, replace = FALSE) |> 
+        sort(decreasing = TRUE)
+    
+    return(autosomes_alleles)
+
 }
 
-choose_male_sex_alleles <- function() {
+choose_sex_allele <- function(is.female) {
    
-    male_sex_alleles <- sample(list(c(TRUE, FALSE), c(FALSE, TRUE)), size = 1)[[1]]
-    return(list(male_sex_alleles[1], male_sex_alleles[2]))
+    sex_allele <- sample(c(TRUE, FALSE), size = 1) | is.female
+    return(sex_allele)
 
 }
 
-generate_genome <- function(pool_alleles = POOL_ALLELES, chr_count = CHR_COUNT, male = TRUE) {
+choose_male_sex_allele   <- function() { choose_sex_allele(is.female = FALSE) }
+choose_female_sex_allele <- function() { choose_sex_allele(is.female = TRUE) }
 
-    autosomes_alleles <- choose_autosomes_alleles()
-    if (male) {
-        sex_alleles <- choose_male_sex_alleles()
-    } else {
-        sex_alleles <- list(TRUE, TRUE)
-    }
-    genome <- matrix(c(
-        autosomes_alleles[[1]], sex_alleles[[1]],
-        autosomes_alleles[[2]], sex_alleles[[2]]),
+generate_chromatides <- function(pool_alleles = POOL_ALLELES, chr_count = CHR_COUNT, is.female) {
+
+    autosomes_alleles <- choose_autosomes_alleles(
+        pool_alleles = pool_alleles,
+        chr_count = chr_count
+    )
+    sex_allele <- choose_sex_allele(is.female)
+
+    return(c(autosomes_alleles, sex_allele))
+
+}
+
+generate_chromatides_from_male <- function() {
+
+    chromatides_from_male <- generate_chromatides(is.female = FALSE)
+    
+    return(chromatides_from_male)
+  
+}
+
+generate_chromatides_from_female <- function() {
+
+    chromatides_from_female <- generate_chromatides(is.female = TRUE)
+  
+    return(chromatides_from_female)
+   
+}
+
+generate_genome <- function(random = FALSE, is.daughter = TRUE) {
+
+    genome <- matrix(
+        c(generate_chromatides_from_male(), generate_chromatides_from_female()),
         ncol = 2,
         byrow = FALSE
     )
     
-    return (genome)
+    if (random) { 
+      return(genome) 
+    } else {
+      chr_count <- nrow(genome)
+      genome[chr_count, 1] <- as.numeric(is.daughter)
+      return(genome)
+    }
+}
+
+generate_genome_fille <- function() {
+  
+    genome_fille <- generate_genome()
+    return(genome_fille)
+  
+}
+
+generate_genome_garcon <- function() {
+  
+    genome_garcon <- generate_genome(is.daughter = FALSE)
+    return(genome_garcon)
 
 }
 
@@ -48,13 +93,6 @@ is.male <- function(genome, chr_count = CHR_COUNT) {
     return(xor(genome[chr_count + 1, 1], genome[chr_count + 1, 2]))
 
 }
-
-# Génomes grands-parents paternels (suffixés 1) et maternels (suffixés 2)
-
-genome_gp1 <- generate_genome()
-genome_gm1 <- generate_genome(male = FALSE)
-genome_gp2 <- generate_genome()
-genome_gm2 <- generate_genome(male = FALSE)
 
 # la fonction new_alleles génère les allèles issus du père, ou de la mère.
 # la fonction new_genome rassemble les 2 composantes issues de new_alleles
@@ -146,9 +184,18 @@ simulation <- function(count, size) {
         }
         saveRDS(prop.oncle, file = paste0("data/df", i, ".RDS"))
     }
-    saveRDS(list_genomes, file = paste0("liste_genomes.RDS"))
+    tib_genomes <- tibble::as.tibble(list_genomes)
+    names(tib_genomes) <- c("genome.pere", "genome.oncle", "genome.mere", "genome.enfant")
+    saveRDS(tib_genomes, file = paste0("tib_genomes.RDS"))
 
 }
+
+# Génomes grands-parents paternels (suffixés 1) et maternels (suffixés 2)
+
+genome_gp1 <- generate_genome_garcon()
+genome_gm1 <- generate_genome_fille()
+genome_gp2 <- generate_genome_garcon()
+genome_gm2 <- generate_genome_fille()
 
 simulation(count = 1000, size = 100000)
 
@@ -168,4 +215,4 @@ summary(df$prop.oncle)
 #library(ggplot2)
 #df |>
 #  ggplot( aes(x=prop.oncle)) +
-    #  geom_density(fill="#69b3a2", color="#e9ecef", alpha=0.8)
+  #  geom_density(fill="#69b3a2", color="#e9ecef", alpha=0.8)
